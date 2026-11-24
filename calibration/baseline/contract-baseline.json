@@ -1,0 +1,362 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-11-24T07:28:36.466Z",
+  "dshVersion": "0.2.2-rc.5",
+  "exitMap": {
+    "completed": 0,
+    "error": 1
+  },
+  "reasonKindEnum": [
+    "aborted",
+    "blocked",
+    "completed",
+    "error",
+    "forked",
+    "interrupted",
+    "max-tokens"
+  ],
+  "fixtures": {
+    "pong": {
+      "expectExit": 0,
+      "requiredTypes": [
+        "session",
+        "status",
+        "final"
+      ],
+      "eventTypes": [
+        "final",
+        "session",
+        "status",
+        "text",
+        "thinking"
+      ],
+      "schemas": {
+        "session": {
+          "type": "object",
+          "fields": {
+            "type": {
+              "type": "string"
+            },
+            "sessionId": {
+              "type": "string"
+            },
+            "cwd": {
+              "type": "string"
+            }
+          }
+        },
+        "status": {
+          "type": "object",
+          "fields": {
+            "type": {
+              "type": "string"
+            },
+            "phase": {
+              "type": "string"
+            },
+            "turn": {
+              "type": "number"
+            },
+            "step": {
+              "type": "number"
+            },
+            "usage": {
+              "type": "object",
+              "fields": {
+                "inputTokens": {
+                  "type": "number"
+                },
+                "outputTokens": {
+                  "type": "number"
+                },
+                "cacheReadTokens": {
+                  "type": "number"
+                },
+                "cacheWriteTokens": {
+                  "type": "number"
+                },
+                "totalTokens": {
+                  "type": "number"
+                }
+              }
+            },
+            "reason": {
+              "type": "object",
+              "fields": {
+                "kind": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "thinking": {
+          "type": "object",
+          "fields": {
+            "type": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            }
+          }
+        },
+        "text": {
+          "type": "object",
+          "fields": {
+            "type": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            }
+          }
+        },
+        "final": {
+          "type": "object",
+          "fields": {
+            "type": {
+              "type": "string"
+            },
+            "sessionId": {
+              "type": "string"
+            },
+            "reason": {
+              "type": "object",
+              "fields": {
+                "kind": {
+                  "type": "string"
+                }
+              }
+            },
+            "text": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "reasonKinds": [
+        "completed"
+      ],
+      "sequence": [
+        "session",
+        "status",
+        "status",
+        "thinking",
+        "text",
+        "status",
+        "status",
+        "final"
+      ]
+    },
+    "readfile": {
+      "expectExit": 0,
+      "requiredTypes": [
+        "session",
+        "status",
+        "text",
+        "tool_call",
+        "tool_result",
+        "final"
+      ],
+      "eventTypes": [
+        "final",
+        "session",
+        "status",
+        "text",
+        "thinking",
+        "tool_call",
+        "tool_result"
+      ],
+      "schemas": {
+        "session": {
+          "type": "object",
+          "fields": {
+            "type": {
+              "type": "string"
+            },
+            "sessionId": {
+              "type": "string"
+            },
+            "cwd": {
+              "type": "string"
+            }
+          }
+        },
+        "status": {
+          "type": "object",
+          "fields": {
+            "type": {
+              "type": "string"
+            },
+            "phase": {
+              "type": "string"
+            },
+            "turn": {
+              "type": "number"
+            },
+            "step": {
+              "type": "number"
+            },
+            "usage": {
+              "type": "object",
+              "fields": {
+                "inputTokens": {
+                  "type": "number"
+                },
+                "outputTokens": {
+                  "type": "number"
+                },
+                "cacheReadTokens": {
+                  "type": "number"
+                },
+                "cacheWriteTokens": {
+                  "type": "number"
+                },
+                "totalTokens": {
+                  "type": "number"
+                }
+              }
+            },
+            "reason": {
+              "type": "object",
+              "fields": {
+                "kind": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "thinking": {
+          "type": "object",
+          "fields": {
+            "type": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            }
+          }
+        },
+        "tool_call": {
+          "type": "object",
+          "fields": {
+            "type": {
+              "type": "string"
+            },
+            "callId": {
+              "type": "string"
+            },
+            "tool": {
+              "type": "string"
+            },
+            "input": {
+              "type": "object",
+              "fields": {
+                "file_path": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "tool_result": {
+          "type": "object",
+          "fields": {
+            "type": {
+              "type": "string"
+            },
+            "callId": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "result": {
+              "type": "string"
+            }
+          }
+        },
+        "text": {
+          "type": "object",
+          "fields": {
+            "type": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            }
+          }
+        },
+        "final": {
+          "type": "object",
+          "fields": {
+            "type": {
+              "type": "string"
+            },
+            "sessionId": {
+              "type": "string"
+            },
+            "reason": {
+              "type": "object",
+              "fields": {
+                "kind": {
+                  "type": "string"
+                }
+              }
+            },
+            "text": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "reasonKinds": [
+        "completed"
+      ],
+      "sequence": [
+        "session",
+        "status",
+        "status",
+        "thinking",
+        "tool_call",
+        "tool_result",
+        "status",
+        "status",
+        "thinking",
+        "text",
+        "status",
+        "status",
+        "final"
+      ]
+    },
+    "badsession": {
+      "expectExit": 1,
+      "requiredTypes": [
+        "error"
+      ],
+      "eventTypes": [
+        "error"
+      ],
+      "schemas": {
+        "error": {
+          "type": "object",
+          "fields": {
+            "type": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "reasonKinds": [],
+      "sequence": [
+        "error"
+      ]
+    }
+  },
+  "reasonKindEnumSource": "dsh-agent@0.2.2-rc.5 lib/index.js accountsForClaim switch + v8-ignore comment (TurnEndReasonMap is merge-extensible upstream); observed live: completed, error"
+}

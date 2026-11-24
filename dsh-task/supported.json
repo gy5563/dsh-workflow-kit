@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "dsh": {
+    "supported": "0.2.2-rc.5",
+    "policy": "exact-pin",
+    "reason": "DSH is in developer preview; NDJSON projection, session format and profile patch semantics may change between RCs. Refuse silent half-compatibility."
+  },
+  "dsh-acp-server": {
+    "supported": "0.14.x",
+    "policy": "minor-range"
+  },
+  "node": {
+    "minimum": "22.0.0",
+    "reason": "node:zlib zstdDecompressSync is required to read session.v4.jsonl.zstd recordings"
+  },
+  "desktopApp": {
+    "pairedWith": "0.2.2-rc.5",
+    "reason": "CLI/desktop version pairing avoids protocol drift in the shared session store"
+  },
+  "workspaceLedger": {
+    "unitVersion": 2,
+    "status": "unsupported-internal-format",
+    "reason": "desktop thread-grouping edits (option 2) target an internal storage format; detect drift, back up, never write silently"
+  }
+}
