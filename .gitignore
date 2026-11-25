@@ -1,3 +1,6 @@
 calibration/runs/
 node_modules/
 *.log
+
+# wrapper run artifacts (default outDir = <cwd>/.dsh-task)
+.dsh-task/
