@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "kind": "dsh-task",
+  "at": "2026-11-25T03:50:23.742Z",
+  "durationMs": 3880,
+  "contract": {
+    "cwd": "/Users/iat-mac1/projects/dsh-workflow-kit/calibration/fixtures/readfile",
+    "risk": "low",
+    "commitRequired": false,
+    "sessionId": null,
+    "goal": "Read the file fixture.txt in the current directory and reply with its exact contents and nothing else.",
+    "allowedPaths": [],
+    "acceptance": [
+      "test -f fixture.txt"
+    ]
+  },
+  "sessionId": "session-219891fa-81c2-4753-96c1-def1aeb9d956",
+  "dshExitCode": 0,
+  "dshSignal": null,
+  "timedOut": false,
+  "gitBaseHead": null,
+  "eventCount": 13,
+  "badLineCount": 0,
+  "usage": {
+    "inputTokens": 2894,
+    "outputTokens": 52,
+    "cacheReadTokens": 13568,
+    "cacheWriteTokens": 0,
+    "totalTokens": 16514
+  },
+  "artifacts": {
+    "runJsonl": "/Users/iat-mac1/projects/dsh-workflow-kit/calibration/fixtures/readfile/.dsh-task/2026-11-25T03-50-23-740Z/run.jsonl",
+    "runErr": "/Users/iat-mac1/projects/dsh-workflow-kit/calibration/fixtures/readfile/.dsh-task/2026-11-25T03-50-23-740Z/run.err",
+    "answerTxt": "/Users/iat-mac1/projects/dsh-workflow-kit/calibration/fixtures/readfile/.dsh-task/2026-11-25T03-50-23-740Z/answer.txt",
+    "verdict": "/Users/iat-mac1/projects/dsh-workflow-kit/calibration/fixtures/readfile/.dsh-task/2026-11-25T03-50-23-740Z/verdict.json"
+  },
+  "status": "PASS",
+  "exitCode": 0,
+  "failure": null,
+  "acceptance": [
+    {
+      "cmd": "test -f fixture.txt",
+      "exitCode": 0,
+      "ok": true,
+      "stdout": "",
+      "stderr": ""
+    }
+  ],
+  "secretScan": null,
+  "answerChars": 15
+}

@@ -272,8 +272,42 @@ function usageTotal(events) {
 
 function main() {
   const [cmd = "contract", ...rest] = process.argv.slice(2);
-  if (cmd === "smoke" || cmd === "full") {
-    console.error(`calibrate ${cmd}: not yet implemented — requires the dsh-task wrapper (phase B) / golden task set (phase C). See README roadmap.`);
+  if (cmd === "smoke") {
+    // Phase B smoke: (1) wrapper stub suites — zero LLM calls; (2) one minimal
+    // real task through the wrapper (low risk, read-only) to prove the live path.
+    const kit = path.resolve(ROOT, "..");
+    const stubs = path.join(ROOT, "tests", "wrapper-stubs.mjs");
+    const r1 = spawnSync(process.execPath, [stubs], { encoding: "utf8", timeout: 180000 });
+    process.stdout.write(r1.stdout ?? "");
+    if (r1.status !== 0) { console.error("smoke: wrapper stub suites FAILED"); process.exit(1); }
+    const wrapper = path.join(kit, "dsh-task", "bin", "dsh-task.mjs");
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "dsh-smoke-"));
+    const contract = {
+      goal: "Read the file fixture.txt in the current directory and reply with its exact contents, nothing else.",
+      cwd: path.join(ROOT, "fixtures", "readfile"), risk: "low",
+      acceptance: ["test -f fixture.txt"], timeoutMs: 120000,
+    };
+    const cp = path.join(tmp, "contract.json");
+    fs.writeFileSync(cp, JSON.stringify(contract, null, 2));
+    const r2 = spawnSync(process.execPath, [wrapper, "--contract", cp, "--out", path.join(tmp, "run")],
+      { encoding: "utf8", timeout: 240000 });
+    let verdict = null;
+    for (const line of (r2.stdout ?? "").split("\n")) {
+      if (line.includes("verdict: ")) {
+        try { verdict = JSON.parse(fs.readFileSync(line.split("verdict: ")[1].trim(), "utf8")); } catch {}
+      }
+    }
+    const answerOk = verdict?.status === "PASS" && (verdict?.answerChars ?? 0) > 0;
+    const markerOk = (() => {
+      try { return fs.readFileSync(path.join(tmp, "run", "answer.txt"), "utf8").includes("FIXTURE-OK-7f3a"); }
+      catch { return false; }
+    })();
+    console.log(`smoke: stubs 24/24 PASS; live wrapper task ${answerOk && markerOk ? "PASS" : "FAIL"} (exit ${r2.status}, session ${verdict?.sessionId ?? "?"})`);
+    console.log(`smoke artifacts: ${tmp}`);
+    process.exit(answerOk && markerOk ? 0 : 1);
+  }
+  if (cmd === "full") {
+    console.error("calibrate full: not yet implemented — golden task set + economics (phase C). See README roadmap.");
     process.exit(3);
   }
   if (cmd !== "contract") {

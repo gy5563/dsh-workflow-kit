@@ -1,0 +1,8 @@
+name: dsh-dispatch
+version: 0.1.0
+description: Thin Hermes dispatch surface for the DeepSeek Harness worker (contract tool, /dsh-review, session-end reminder). All task logic lives in dsh-workflow-kit.
+author: Hermes Agent (local)
+provides_tools:
+  - dispatch_dsh_task
+provides_hooks:
+  - on_session_end
