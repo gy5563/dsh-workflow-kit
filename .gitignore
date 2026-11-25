@@ -9,3 +9,6 @@ node_modules/
 # runs/ and report-*.json are logs; results.jsonl + baseline-metrics.json stay tracked
 calibration/golden/*/
 calibration/golden/report-*.json
+
+# release tarballs
+dist/

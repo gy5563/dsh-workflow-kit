@@ -5,6 +5,31 @@ Validation and maturation kit for the **Hermes (manager) → DeepSeek Harness
 pasted 2026-11-24: assert, don't observe; three artifacts, not one plugin;
 four gates; doctor + contract calibration before any pluginization.
 
+## Plug and play (fresh machine)
+
+Prereqs: macOS/Linux, node ≥ 22, npm, git, Hermes (`~/.hermes`); Zed optional.
+
+```sh
+# copy this directory (or unpack the release tarball), then:
+node install.mjs --with-zed --verify
+```
+
+`install.mjs` is **idempotent** (re-running changes nothing) and automates:
+pinned npm installs into `~/.local` (no sudo) · bin symlinks (`dsh-doctor`,
+`dsh-task`, `dsh-assemble`, `calibrate`) · portable `dsh-worker` zsh wrapper ·
+Hermes plugin symlink (`dsh-dispatch`) · worker-skill snapshot (only if
+absent) · profile auth patches via `dsh-assemble` (backups kept) · Zed
+registration with `--with-zed` (JSONC-safe: backup + parse-verify +
+auto-restore; tested by `calibration/tests/install-zed-stubs.mjs`, 12
+assertions) · `dsh-doctor` (+ `calibrate smoke` with `--verify`).
+Flags: `--dry-run`, `--prefix <dir>`, `--zed-settings <path>`.
+
+Manual by design (never automated): **DeepSeek sign-in** — run `dsh` once and
+sign in (account OAuth) or set `DEEPSEEK_API_KEY`; credentials are never
+written or shipped. **Restart Zed** after registration. The desktop ownership
+ledger stays detection-only. Plugin tools arrive in the next Hermes gateway
+session after install.
+
 ## Artifacts
 
 | Dir | Artifact | Status |
