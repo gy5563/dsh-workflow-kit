@@ -1,0 +1,149 @@
+{
+  "at": "2026-11-25T04:06:32.666Z",
+  "failures": [],
+  "slopes": {
+    "wrapper": {
+      "sizes": [
+        1,
+        3,
+        6
+      ],
+      "tokensPerFile": 241.4,
+      "wallMsPerFile": -60,
+      "points": [
+        {
+          "n": 1,
+          "billed": 4366,
+          "wallMs": 9372,
+          "cacheRead": 40704
+        },
+        {
+          "n": 3,
+          "billed": 5159,
+          "wallMs": 10315,
+          "cacheRead": 51072
+        },
+        {
+          "n": 6,
+          "billed": 5573,
+          "wallMs": 9072,
+          "cacheRead": 42624
+        }
+      ]
+    },
+    "acp-direct": {
+      "sizes": [
+        1,
+        6
+      ],
+      "tokensPerFile": 268.4,
+      "wallMsPerFile": 423.4,
+      "points": [
+        {
+          "n": 1,
+          "billed": 4424,
+          "wallMs": 8845,
+          "cacheRead": 58624
+        },
+        {
+          "n": 6,
+          "billed": 5766,
+          "wallMs": 10962,
+          "cacheRead": 64256
+        }
+      ]
+    }
+  },
+  "tasks": {
+    "minimal-fix|wrapper": {
+      "firstPass": true,
+      "status": "PASS",
+      "exitCode": 0,
+      "billed": 2189,
+      "cacheRead": 62208,
+      "wallMs": 10012,
+      "sessionId": "session-9c826b6a-619f-4b93-864f-0ecdd3110059"
+    },
+    "feature|wrapper": {
+      "firstPass": true,
+      "status": "PASS",
+      "exitCode": 0,
+      "billed": 2013,
+      "cacheRead": 43520,
+      "wallMs": 8521,
+      "sessionId": "session-f4528068-71cc-4638-a098-9fb11cb617fe"
+    },
+    "batch-1|wrapper": {
+      "firstPass": true,
+      "status": "PASS",
+      "exitCode": 0,
+      "billed": 4366,
+      "cacheRead": 40704,
+      "wallMs": 9372,
+      "sessionId": "session-4c10befe-4543-4edf-9db6-88500f894439"
+    },
+    "batch-3|wrapper": {
+      "firstPass": true,
+      "status": "PASS",
+      "exitCode": 0,
+      "billed": 5159,
+      "cacheRead": 51072,
+      "wallMs": 10315,
+      "sessionId": "session-14a4d51c-b653-422c-96b8-8a0a184344df"
+    },
+    "batch-6|wrapper": {
+      "firstPass": true,
+      "status": "PASS",
+      "exitCode": 0,
+      "billed": 5573,
+      "cacheRead": 42624,
+      "wallMs": 9072,
+      "sessionId": "session-481f0723-ee70-4899-a57e-03e1037dd140"
+    },
+    "resume-r1|wrapper": {
+      "firstPass": true,
+      "status": "PASS",
+      "exitCode": 0,
+      "billed": 4639,
+      "cacheRead": 40832,
+      "wallMs": 10670,
+      "sessionId": "session-de85acdd-9843-421b-9528-3237c6402b9a"
+    },
+    "resume-r2|wrapper": {
+      "firstPass": true,
+      "status": "PASS",
+      "exitCode": 0,
+      "billed": 2746,
+      "cacheRead": 74496,
+      "wallMs": 10971,
+      "sessionId": "session-de85acdd-9843-421b-9528-3237c6402b9a"
+    },
+    "minimal-fix|acp-direct": {
+      "firstPass": true,
+      "status": "end_turn",
+      "exitCode": 0,
+      "billed": 4095,
+      "cacheRead": 49408,
+      "wallMs": 8990,
+      "sessionId": "acp-bb57751c-f00a-4680-9213-7fd91d7f7ef6"
+    },
+    "batch-1|acp-direct": {
+      "firstPass": true,
+      "status": "end_turn",
+      "exitCode": 0,
+      "billed": 4424,
+      "cacheRead": 58624,
+      "wallMs": 8845,
+      "sessionId": "acp-3186ff29-47f8-47a7-bab9-ec31d3f7b274"
+    },
+    "batch-6|acp-direct": {
+      "firstPass": true,
+      "status": "end_turn",
+      "exitCode": 0,
+      "billed": 5766,
+      "cacheRead": 64256,
+      "wallMs": 10962,
+      "sessionId": "acp-d4d2dd7d-7ee4-46b8-b341-06f392292d32"
+    }
+  }
+}

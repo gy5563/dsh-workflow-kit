@@ -59,3 +59,41 @@ desktop app `0.2.2-rc.5`, node `v26.10.0`, macOS arm64. Date: 2026-11-24.
   workaround B1.
 - **Ledger edits may need redoing after app upgrades**; always quit the app
   first (single-writer store) and keep a backup.
+
+## D. Phase C calibration findings (2026-11-25)
+
+1. **No "PTC mode" in `dsh@0.2.2-rc.5`.** The spec's batch-migration surface
+   does not exist in the CLI (`dsh --help`, headless help, plugin list — no
+   PTC/batch surface). Batch golden tasks therefore use plain headless
+   dispatch of an n-file goal; economics are measured on that, not on a
+   fictional mode. Re-check after upgrades.
+2. **`node --test <dir>` is broken on node v26.7.0** (system node): a directory
+   argument is loaded as a CJS module (`Cannot find module …/test`), exit 1 —
+   which *looks* like a failing test suite. Use `node --test` (discovery) or a
+   glob (`node --test "test/*.test.mjs"`). Acceptance commands in
+   `golden/tasks.json` use discovery. A RED baseline verified with the broken
+   form is a false RED.
+3. **Usage field naming differs by surface.** Headless NDJSON emits
+   `cacheReadTokens`/`cacheWriteTokens`; ACP emits
+   `cachedReadTokens`/`cachedWriteTokens`. `golden-acp.mjs` normalizes before
+   comparison — never sum raw fields across surfaces.
+4. **Commit is a wrapper gate, not an LLM behavior.** `commitRequired` makes
+   the *wrapper* stage + commit (with `[dsh-session: <id>]` audit trailer)
+   after acceptance passes, and fail closed on: no work
+   (`commit-required-empty`), out-of-scope changes (`scope-violation`), or git
+   failure (`commit-failed`) — all exit 8. The ACP-direct path has no such
+   gate: its goal must explicitly instruct the worker to commit, and
+   `golden-acp.mjs` verifies the repo state independently. This asymmetry is
+   part of the wrapper's value, not a measurement artifact.
+5. **Economics (n=1,3,6 synthetic batch files, deepseek-flash).** Billed
+   (input+output) slope: wrapper +241 tokens/file, ACP-direct +268
+   tokens/file — the gates add no measurable per-file token overhead. Wall
+   slope ≈ 0 (wrapper) / +0.4 s/file (ACP) at this scale; fixed overhead
+   (~9 s/dispatch) dominates. Cached reads (40–75k/run) dwarf billed tokens;
+   compare billed, not totals. Baseline: `golden/baseline-metrics.json`;
+   `calibrate full` WARNs if wall slope grows >3×.
+6. **Porcelain parsing pitfall (fixed, regression-tested).** Never `.trim()`
+   the whole `git status --porcelain` output: it eats the leading status space
+   of the first line and shifts every `slice(3)` path by one character
+   (`calc.js` → `alc.js`), producing phantom scope violations. Stub T5 covers
+   tracked-modified files explicitly.

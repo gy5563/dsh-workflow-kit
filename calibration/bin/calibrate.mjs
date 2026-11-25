@@ -302,13 +302,79 @@ function main() {
       try { return fs.readFileSync(path.join(tmp, "run", "answer.txt"), "utf8").includes("FIXTURE-OK-7f3a"); }
       catch { return false; }
     })();
-    console.log(`smoke: stubs 24/24 PASS; live wrapper task ${answerOk && markerOk ? "PASS" : "FAIL"} (exit ${r2.status}, session ${verdict?.sessionId ?? "?"})`);
+    const stubCount = (r1.stdout ?? "").match(/(\d+) passed, (\d+) failed/);
+    console.log(`smoke: stubs ${stubCount ? `${stubCount[1]}/${Number(stubCount[1]) + Number(stubCount[2])}` : "?"} PASS; live wrapper task ${answerOk && markerOk ? "PASS" : "FAIL"} (exit ${r2.status}, session ${verdict?.sessionId ?? "?"})`);
     console.log(`smoke artifacts: ${tmp}`);
     process.exit(answerOk && markerOk ? 0 : 1);
   }
   if (cmd === "full") {
-    console.error("calibrate full: not yet implemented — golden task set + economics (phase C). See README roadmap.");
-    process.exit(3);
+    // Phase C: aggregate the golden-set results (wrapper + ACP-direct paths),
+    // assert first-pass success, compute batch-size slopes, compare baseline.
+    // Run the dispatches first: golden.mjs (wrapper) + golden-acp.mjs (ACP).
+    const G = path.join(ROOT, "golden");
+    const resultsFile = path.join(G, "results.jsonl");
+    if (!fs.existsSync(resultsFile)) {
+      console.error("calibrate full: no results yet — run `node calibration/bin/golden.mjs` and `node calibration/bin/golden-acp.mjs` first.");
+      process.exit(3);
+    }
+    const latest = new Map();
+    for (const line of fs.readFileSync(resultsFile, "utf8").split("\n")) {
+      if (!line.trim()) continue;
+      try { const e = JSON.parse(line); latest.set(`${e.task}|${e.path}`, e); } catch {}
+    }
+    const needWrapper = ["minimal-fix", "feature", "batch-1", "batch-3", "batch-6", "resume-r1", "resume-r2"];
+    const needAcp = ["minimal-fix", "batch-1", "batch-6"];
+    const missing = [];
+    for (const t of needWrapper) if (!latest.has(`${t}|wrapper`)) missing.push(`${t}|wrapper`);
+    for (const t of needAcp) if (!latest.has(`${t}|acp-direct`)) missing.push(`${t}|acp-direct`);
+    if (missing.length) { console.error("calibrate full: missing results:", missing.join(", ")); process.exit(3); }
+
+    const failures = [];
+    for (const [k, e] of latest) {
+      if (!needWrapper.includes(e.task) && !needAcp.includes(e.task)) continue;
+      if (!e.firstPass) failures.push(`${k}: ${e.status} exit=${e.exitCode}`);
+      if (e.task === "resume-r2" && e.sessionContinuity === false) failures.push("resume-r2: session continuity broken");
+    }
+    const billed = (e) => (e.usage?.inputTokens ?? 0) + (e.usage?.outputTokens ?? 0);
+    const slope = (pathName, sizes) => {
+      const pts = sizes.map((n) => latest.get(`batch-${n}|${pathName}`)).filter(Boolean);
+      if (pts.length < 2) return null;
+      const a = pts[0], b = pts[pts.length - 1];
+      const dn = sizes[sizes.length - 1] - sizes[0];
+      return {
+        sizes, tokensPerFile: (billed(b) - billed(a)) / dn,
+        wallMsPerFile: (b.wallMs - a.wallMs) / dn,
+        points: pts.map((p, i) => ({ n: sizes[i], billed: billed(p), wallMs: p.wallMs, cacheRead: p.usage?.cacheReadTokens ?? 0 })),
+      };
+    };
+    const slopes = { wrapper: slope("wrapper", [1, 3, 6]), "acp-direct": slope("acp-direct", [1, 6]) };
+    const report = { at: new Date().toISOString(), failures, slopes, tasks: Object.fromEntries([...latest].filter(([k]) => needWrapper.some((t) => k === `${t}|wrapper`) || needAcp.some((t) => k === `${t}|acp-direct`)).map(([k, e]) => [k, { firstPass: e.firstPass, status: e.status, exitCode: e.exitCode, billed: billed(e), cacheRead: e.usage?.cacheReadTokens ?? 0, wallMs: e.wallMs, sessionId: e.sessionId }])) };
+
+    const baselineFile = path.join(G, "baseline-metrics.json");
+    if (rest.includes("--record")) {
+      fs.writeFileSync(baselineFile, JSON.stringify(report, null, 2));
+      console.log(`baseline recorded: ${baselineFile}`);
+    } else if (fs.existsSync(baselineFile)) {
+      const base = JSON.parse(fs.readFileSync(baselineFile, "utf8"));
+      for (const p of ["wrapper", "acp-direct"]) {
+        const b = base.slopes?.[p], c = slopes[p];
+        if (b && c && b.wallMsPerFile > 0) {
+          const ratio = c.wallMsPerFile / b.wallMsPerFile;
+          console.log(`slope ${p}: wall/file ${c.wallMsPerFile.toFixed(0)}ms vs baseline ${b.wallMsPerFile.toFixed(0)}ms (x${ratio.toFixed(2)})${ratio > 3 ? "  WARN >3x" : ""}`);
+        }
+      }
+    }
+    console.log("\n== golden report ==");
+    for (const [k, t] of Object.entries(report.tasks)) {
+      console.log(`${t.firstPass ? "PASS" : "FAIL"} ${k.padEnd(26)} wall=${((t.wallMs ?? 0) / 1000).toFixed(1)}s billed=${t.billed} cacheRead=${t.cacheRead}`);
+    }
+    for (const [p, s] of Object.entries(slopes)) {
+      if (s) console.log(`slope ${p}: +${s.tokensPerFile.toFixed(0)} billed tokens/file, +${(s.wallMsPerFile / 1000).toFixed(1)}s/file over n=${s.sizes.join(",")}`);
+    }
+    fs.writeFileSync(path.join(G, `report-${Date.now()}.json`), JSON.stringify(report, null, 2));
+    if (failures.length) { console.error("\nFAILURES:\n" + failures.join("\n")); process.exit(1); }
+    console.log("\ncalibrate full: PASS");
+    process.exit(0);
   }
   if (cmd !== "contract") {
     console.error("usage: calibrate contract [--record] | smoke | full");

@@ -10,7 +10,7 @@ four gates; doctor + contract calibration before any pluginization.
 | Dir | Artifact | Status |
 |---|---|---|
 | `dsh-task/` | **2 — DSH task package**: `dsh-doctor` (14 checks), `dsh-task.mjs` contract wrapper (8 exit classes, risk binding, lock pre-check), `dsh-assemble.mjs` (Gate 1, idempotent), `supported.json` | ✅ |
-| `calibration/` | **3 — calibration package**: contract baseline + NDJSON drift checker, `wrapper-stubs.mjs` (24 assertions, zero LLM), `calibrate contract\|smoke\|full` | contract ✅ smoke ✅, full = phase C |
+| `calibration/` | **3 — calibration package**: contract baseline + NDJSON drift checker, `wrapper-stubs.mjs` (29 assertions, zero LLM), `calibrate contract\|smoke\|full`, golden task set + ACP-direct economics (`golden/`) | ✅ all three modes |
 | `hermes-plugin/` | **1 — thin Hermes plugin** (`dsh-dispatch`): `dispatch_dsh_task(contract_path)`, `/dsh-review <session_id>`, bundled skill, session-end reminder + prompt section. Symlinked from `~/.hermes/plugins/dsh-dispatch` | ✅ enabled |
 | `docs/` | `FIDELITY.md` (guaranteed vs undocumented vs unsupported), `UPSTREAM.md` (workaround → upstream map, Gate 4) | ✅ |
 
@@ -20,11 +20,15 @@ four gates; doctor + contract calibration before any pluginization.
 node dsh-task/bin/dsh-doctor.mjs [--json] [--repo <path>] [--skip-auth]
 node dsh-task/bin/dsh-task.mjs --contract <task.json> [--out <dir>] [--dsh-bin <stub>] [--allow-high-risk] [--dry-run]
 node dsh-task/bin/dsh-assemble.mjs [--verify] [--json]   # Gate 1, idempotent
-node calibration/tests/wrapper-stubs.mjs                 # 24 assertions, zero LLM
+node calibration/tests/wrapper-stubs.mjs                 # 29 assertions, zero LLM
 node calibration/bin/calibrate.mjs contract              # live fixtures vs baseline
 node calibration/bin/calibrate.mjs contract --record     # deliberate new baseline
 node calibration/bin/calibrate.mjs contract --replay <fixture> <run.jsonl> <exit>  # zero-LLM
 node calibration/bin/calibrate.mjs smoke                 # stubs + one minimal live task
+node calibration/bin/golden-setup.mjs                    # (re)build synthetic golden repos
+node calibration/bin/golden.mjs [--only <task>|--list]   # golden set via wrapper (LLM)
+node calibration/bin/golden-acp.mjs [--only <task>]      # same goals via ACP-direct (LLM)
+node calibration/bin/calibrate.mjs full [--record]       # aggregate + slopes + baseline
 ```
 
 Symlinks in `~/.local/bin`: `dsh-doctor`, `calibrate`, `dsh-assemble`.
@@ -41,7 +45,13 @@ under `calibration/runs/`.
 3 dsh reported failure · 4 session lock held (dsh NOT invoked; remediation
 names the holder) · 5 output-contract violation (no output / bad NDJSON / no
 final / spawn error / timeout) · 6 empty answer · 7 contract/usage rejection ·
-8 acceptance gate or high-risk secret scan failed.
+8 acceptance gate, commit gate (no work / scope violation / git failure), or
+high-risk secret scan failed.
+
+`commitRequired` is enforced by the **wrapper**, not the LLM: after acceptance
+passes it stages and commits with a `[dsh-session: <id>]` audit trailer
+(`commitMessage` honored), and fails closed if the worker produced nothing or
+touched files outside `allowedPaths`.
 
 Risk binding (Gate 2): low→read-only/never (no commits) · medium→
 workspace-write/never + allowlisted add-dirs (`.git` granted iff
@@ -68,6 +78,21 @@ secret scan before commit. Contract required fields: `goal`, `cwd`,
 - dsh-assemble: exit 0, idempotent (patch files byte-identical across runs);
   ACP handshake still OK after assembly (dsh 0.14.4).
 
+**Phase C (2026-11-25)**
+- Golden set: **10/10 first-pass PASS** — minimal-fix, feature, batch-1/3/6,
+  two-round resume (session continuity asserted: r2 sessionId == r1) via the
+  wrapper; minimal-fix, batch-1/6 via ACP-direct with independent repo-state
+  verification (acceptance re-run + commit check).
+- wrapper-stubs: **29/29** (new T5 commit gate: empty work, scope violation
+  incl. tracked-modified regression, session audit, no double commit).
+- `calibrate full`: exit 0; baseline recorded (`golden/baseline-metrics.json`);
+  comparison branch re-run PASS. Economics: billed slope +241 tokens/file
+  (wrapper) vs +268 (ACP-direct); wall slope ≈0 / +0.4 s/file — gates add no
+  measurable per-file overhead at n≤6. See `docs/FIDELITY.md` §D.
+- Two real bugs found by the goldens and fixed: `node --test <dir>` false RED
+  on node 26.7 (use discovery), and porcelain `.trim()` path-shift phantom
+  scope violations (regression-tested).
+
 ## Roadmap (spec §4 order)
 
 - **Phase A (done)**: doctor + calibrate contract. Headless profile bootstrapped
@@ -75,9 +100,11 @@ secret scan before commit. Contract required fields: `goal`, `cwd`,
 - **Phase B (done)**: contract wrapper + 24 stub assertions + `calibrate smoke`
   + thin plugin (dispatch/review only) + Gate 1 idempotent assembly + Gate 2
   risk binding + Gate 3 lock pre-detection.
-- **Phase C (next)**: golden task set (minimal fix / standard feature / batch /
-  two-round resume) with metrics baselines; `calibrate full`; economic
-  comparison Hermes-dispatched vs ACP-direct (slopes, not absolutes).
+- **Phase C (done)**: golden task set (minimal fix / standard feature / batch
+  n=1,3,6 / two-round resume) with metrics baselines; `calibrate full`;
+  economic comparison wrapper-dispatched vs ACP-direct (slopes, not absolutes).
+  No "PTC mode" exists in dsh 0.2.2-rc.5 — batch tasks use plain headless
+  dispatch (FIDELITY §D1).
 
 ## Environment notes
 
@@ -88,6 +115,9 @@ secret scan before commit. Contract required fields: `goal`, `cwd`,
 - `run.jsonl`/`verdict.json`/`answer.txt` are **kit-produced normalization
   artifacts**, not native dsh outputs (no dsh package writes them).
 - Auth: account OAuth only (stored API key is 401). See `docs/FIDELITY.md` B1.
+- Acceptance commands: use `node --test` (discovery), never `node --test <dir>`
+  — directory args are broken on node 26.7 and fake a failing suite
+  (`docs/FIDELITY.md` §D2).
 - The plugin is version-controlled here; `~/.hermes/plugins/dsh-dispatch` is a
   symlink to `hermes-plugin/`. Edit here, never in the symlink target path.
 - `dsh-assemble` automates only safe reversible steps (profile auth patches

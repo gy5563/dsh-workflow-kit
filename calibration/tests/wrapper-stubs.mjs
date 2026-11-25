@@ -12,6 +12,7 @@
 //   T3 session-resume lock    (held lock → 4 before dsh; released → proceeds)
 //   T4 path fallback          (no-output / bad-ndjson / no-final / empty → 5/6)
 //   T0 contract rejection     (invalid contracts → 7; high-risk refusal)
+//   T5 commit gate            (no work → 8; scope violation → 8; session audit; no double commit)
 
 import { spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
@@ -28,6 +29,7 @@ const STUB = path.join(TMP, "stub-dsh.mjs");
 fs.writeFileSync(STUB, `#!/usr/bin/env node
 import fs from "node:fs";
 import path from "node:path";
+import { spawnSync } from "node:child_process";
 const mode = process.env.STUB_MODE ?? "ok";
 const argv = process.argv.slice(2);
 if (process.env.STUB_ARGV_FILE) fs.writeFileSync(process.env.STUB_ARGV_FILE, JSON.stringify(argv));
@@ -40,13 +42,21 @@ else if (mode === "sigterm") {
   setTimeout(() => process.exit(1), 15000);
 } else if (mode === "git-grant") {
   const grants = argv.filter((a, i) => argv[i - 1] === "--add-dir");
-  if (grants.includes(path.join(process.cwd(), ".git"))) done("COMMITTED");
+  if (grants.includes(path.join(process.cwd(), ".git"))) { fs.writeFileSync(path.join(process.cwd(), "stub-work.txt"), "work\\n"); done("COMMITTED"); }
   else { ev(session); ev({ type: "final", sessionId: session.sessionId, reason: { kind: "error", message: "cannot write .git without grant" }, text: "" }); process.exit(1); }
 } else if (mode === "commit-fails") { ev(session); ev({ type: "final", sessionId: session.sessionId, reason: { kind: "error", message: "commit rejected by stub" }, text: "" }); process.exit(1); }
 else if (mode === "no-output") process.exit(0);
 else if (mode === "garbage") { process.stdout.write("this is not json\\n"); process.exit(0); }
 else if (mode === "no-final") { ev(session); ev({ type: "status", phase: "turn_start", turn: 1 }); process.exit(0); }
 else if (mode === "empty-text") done("");
+else if (mode === "writes-outside") { fs.writeFileSync(path.join(process.cwd(), "outside.txt"), "out\\n"); done("WROTE-OUTSIDE"); }
+else if (mode === "modifies-tracked") { fs.appendFileSync(path.join(process.cwd(), "README.md"), "changed\\n"); done("MODIFIED"); }
+else if (mode === "self-commit") {
+  fs.writeFileSync(path.join(process.cwd(), "self-work.txt"), "self\\n");
+  spawnSync("git", ["add", "-A"], { cwd: process.cwd() });
+  spawnSync("git", ["commit", "-qm", "worker self commit"], { cwd: process.cwd() });
+  done("SELF-COMMITTED");
+}
 else { console.error("unknown stub mode " + mode); process.exit(99); }
 `);
 fs.chmodSync(STUB, 0o755);
@@ -183,6 +193,26 @@ console.log("T0 — contract rejection & risk binding");
   const dry = await runWrapper(contractFor(repo, { risk: "low" }), { mode: "ok", extraArgs: ["--dry-run"] });
   const plan = dry.verdict?.plan ?? {};
   check("low risk binds read-only/never", dry.code === 0 && JSON.stringify(plan.argv ?? []).includes("read-only"), JSON.stringify(plan.argv));
+}
+
+// ---------------------------------------------------------------- T5
+console.log("T5 — commit gate (deterministic commit, scope, audit)");
+{
+  const repo = makeRepo("t5");
+  const empty = await runWrapper(contractFor(repo, { commitRequired: true }), { mode: "ok" });
+  check("commitRequired with no work fails (8 commit-required-empty)", empty.code === 8 && empty.verdict?.failure?.code === "commit-required-empty", `got ${empty.code}`);
+  const scope = await runWrapper(contractFor(repo, { commitRequired: true, allowedPaths: ["src/"] }), { mode: "writes-outside" });
+  check("out-of-scope change fails (8 scope-violation)", scope.code === 8 && scope.verdict?.failure?.code === "scope-violation", `got ${scope.code} ${JSON.stringify(scope.verdict?.failure)}`);
+  const scope2 = await runWrapper(contractFor(repo, { commitRequired: true, allowedPaths: ["src/"] }), { mode: "modifies-tracked" });
+  check("tracked-modified file parsed with leading status space intact (8)", scope2.code === 8 && JSON.stringify(scope2.verdict?.failure?.files ?? []).includes("README.md"), `got ${scope2.code} ${JSON.stringify(scope2.verdict?.failure)}`);
+  const repo2 = makeRepo("t5b");
+  const good = await runWrapper(contractFor(repo2, { commitRequired: true, commitMessage: "fix: stub work" }), { mode: "git-grant" });
+  const log = spawnSync("git", ["-C", repo2, "log", "-1", "--format=%B"], { encoding: "utf8" }).stdout;
+  check("wrapper commits worker output with session audit (0)", good.code === 0 && !!good.verdict?.commit?.sha && log.includes("fix: stub work") && log.includes("[dsh-session: session-11111111"), `got ${good.code} log=${JSON.stringify(log)}`);
+  const repo3 = makeRepo("t5c");
+  const self = await runWrapper(contractFor(repo3, { commitRequired: true }), { mode: "self-commit" });
+  const count = spawnSync("git", ["-C", repo3, "rev-list", "--count", "HEAD"], { encoding: "utf8" }).stdout.trim();
+  check("worker self-commit is not double-committed (0, 2 commits total)", self.code === 0 && count === "2", `got ${self.code} count=${count}`);
 }
 
 console.log(`\n${passCount} passed, ${failCount} failed`);

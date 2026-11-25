@@ -45,13 +45,22 @@ enforced by the wrapper, not by trust:
 | medium | workspace-write | never | cwd + `addDirs`; `.git` granted iff `commitRequired` |
 | high | workspace-write | never | auto-commit refused unless `allow_high_risk=true`; secret scan runs before any commit |
 
+**Commit gate:** `commitRequired` is enforced by the wrapper, never by the
+LLM. After acceptance passes, the wrapper stages and commits itself with a
+`[dsh-session: <id>]` audit trailer (`commitMessage` honored). It fails closed
+(exit 8) on `commit-required-empty` (worker produced nothing), `scope-violation`
+(changes outside `allowedPaths`), or `commit-failed` (git error). Do not instruct
+the worker to commit — the wrapper owns it; a worker self-commit is detected
+and not double-committed.
+
 ## Failure classes (distinct exit codes — never collapse to "failed")
 
 0 PASS · 2 false-success (exit 0 but reason≠completed, incl. SIGTERM-masked) ·
 3 dsh reported failure · 4 session lock held (dsh NOT invoked; remediation in
 verdict) · 5 output-contract violation (no output / bad NDJSON / no final /
 spawn error / timeout) · 6 empty answer · 7 contract/usage rejection ·
-8 acceptance gate or secret scan failed.
+8 acceptance gate, commit gate (empty work / scope violation / git failure),
+or secret scan failed.
 
 Artifacts per run: `run.jsonl` (raw events), `answer.txt`, `verdict.json`.
 
@@ -81,3 +90,8 @@ Artifacts per run: `run.jsonl` (raw events), `answer.txt`, `verdict.json`.
 - Headless auth lives in `~/.dsh/profiles/headless/cordis.patch.yml`
   (credentials + authorization + deepseek-account + agent-default-model).
   Never print credential refs.
+- Acceptance gates: use `node --test` (discovery) or explicit file/glob args —
+  `node --test <dir>` is broken on node 26.7 and fakes a failing suite.
+- Full calibration: `calibrate full` (golden set + economics; dispatch with
+  `calibration/bin/golden.mjs` and `golden-acp.mjs` first). Findings and
+  fidelity gaps: `docs/FIDELITY.md`.

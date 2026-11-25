@@ -4,3 +4,8 @@ node_modules/
 
 # wrapper run artifacts (default outDir = <cwd>/.dsh-task)
 .dsh-task/
+
+# phase C golden artifacts: fixture repos are rebuilt by golden-setup.mjs,
+# runs/ and report-*.json are logs; results.jsonl + baseline-metrics.json stay tracked
+calibration/golden/*/
+calibration/golden/report-*.json

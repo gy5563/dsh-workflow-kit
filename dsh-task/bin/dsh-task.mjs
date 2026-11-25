@@ -290,6 +290,33 @@ async function main() {
     finish("FAIL", EXIT.GATE_FAILED, { code: "acceptance-failed", message: "one or more acceptance commands failed", failed: acceptance.filter((a) => !a.ok).map((a) => a.cmd) }, { acceptance });
   }
 
+  // --- commit gate (Gate 3): deterministic commit + session-id audit ---------
+  // commitRequired is a GATE, not a hope: the wrapper commits the worker's
+  // changes itself (the LLM is never trusted to run git commit). Scope is
+  // checked against allowedPaths before staging.
+  let commitInfo = null;
+  if (c.commitRequired) {
+    const git = (...a) => spawnSync("git", ["-C", c.cwd, ...a], { encoding: "utf8", timeout: 30_000 });
+    // NB: never .trim() the whole porcelain output — it eats the leading
+    // status space of the first line and shifts every slice(3) path by one.
+    const statusLines = (git("status", "--porcelain").stdout ?? "").split("\n").filter((l) => l.trim());
+    const headNow = (git("rev-parse", "HEAD").stdout ?? "").trim();
+    if (statusLines.length) {
+      const files = statusLines.map((l) => l.slice(3).split(" -> ").pop().replace(/^"|"$/g, ""));
+      if ((c.allowedPaths ?? []).length) {
+        const outOfScope = files.filter((f) => !c.allowedPaths.some((p) => f === p || f.startsWith(p.endsWith("/") ? p : p + "/")));
+        if (outOfScope.length) finish("FAIL", EXIT.GATE_FAILED, { code: "scope-violation", message: "changed files outside allowedPaths", files: outOfScope }, { acceptance });
+      }
+      const msg = `${c.commitMessage ?? `fix: dsh-task — ${c.goal.slice(0, 60)}`}\n\n[dsh-session: ${sessionId ?? "unknown"}]`;
+      git("add", "-A");
+      const cr = git("-c", "user.name=dsh-task", "-c", "user.email=dsh-task@local", "commit", "-qm", msg);
+      if (cr.status !== 0) finish("FAIL", EXIT.GATE_FAILED, { code: "commit-failed", message: (cr.stderr ?? "").slice(0, 300) }, { acceptance });
+    } else if (headNow === baseHead) {
+      finish("FAIL", EXIT.GATE_FAILED, { code: "commit-required-empty", message: "commitRequired but the worker left no changes and made no commit" }, { acceptance });
+    }
+    commitInfo = { sha: (git("rev-parse", "HEAD").stdout ?? "").trim(), auditedSession: sessionId ?? null };
+  }
+
   // --- high-risk secret scan (Gate 2) ------------------------------------------
   let scan = null;
   if (c.risk === "high" && c.commitRequired && baseHead) {
@@ -299,7 +326,7 @@ async function main() {
     }
   }
 
-  finish("PASS", EXIT.PASS, null, { acceptance, secretScan: scan, answerChars: answer.length });
+  finish("PASS", EXIT.PASS, null, { acceptance, secretScan: scan, answerChars: answer.length, commit: commitInfo });
 }
 
 main().catch((e) => die(EXIT.OUTPUT_CONTRACT, { code: "wrapper-error", message: e?.stack ?? String(e) }));

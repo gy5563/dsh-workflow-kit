@@ -1,0 +1,46 @@
+{
+  "minimal-fix": {
+    "goal": "The test suite fails: add(2,3) returns -1 because calc.js uses subtraction. Fix the add function in calc.js so all tests pass. Do not modify the tests.",
+    "risk": "medium",
+    "acceptance": ["node --test"],
+    "allowedPaths": ["calc.js"],
+    "commitRequired": true,
+    "commitMessage": "fix: add uses addition",
+    "timeoutMs": 300000
+  },
+  "feature": {
+    "goal": "Implement slugify(s) in src/stringutil.js so all three tests pass: lowercase, spaces->dashes, strip punctuation (apostrophes removed entirely), trim, collapse repeated dashes. Do not modify the tests.",
+    "risk": "medium",
+    "acceptance": ["node --test"],
+    "allowedPaths": ["src/"],
+    "commitRequired": true,
+    "commitMessage": "feat: slugify",
+    "timeoutMs": 300000
+  },
+  "batch-template": {
+    "goal": "Migrate all {n} module(s) in src/: rename the exported function legacyName to modernName and change its return value from \"old\" to \"new\". The tests already import modernName and expect \"new\". Do not modify the tests.",
+    "risk": "medium",
+    "acceptance": ["node --test"],
+    "allowedPaths": ["src/"],
+    "commitRequired": true,
+    "commitMessage": "refactor: migrate {n} module(s)",
+    "timeoutMs": 600000
+  },
+  "resume-r1": {
+    "goal": "Create src/store.js exporting a class Store with a set(key, value) method that stores values in an internal Map. Do NOT implement get() yet and do NOT commit anything.",
+    "risk": "medium",
+    "acceptance": ["test -f src/store.js"],
+    "allowedPaths": ["src/"],
+    "commitRequired": false,
+    "timeoutMs": 300000
+  },
+  "resume-r2": {
+    "goal": "Continue the previous round: add get(key) to the Store class in src/store.js (returns the stored value or undefined), create test/store.test.mjs covering set+get with node:test, make the tests pass, and commit.",
+    "risk": "medium",
+    "acceptance": ["node --test"],
+    "allowedPaths": ["src/", "test/"],
+    "commitRequired": true,
+    "commitMessage": "feat: store get + tests (round 2)",
+    "timeoutMs": 300000
+  }
+}
